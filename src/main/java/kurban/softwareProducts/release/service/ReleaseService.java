@@ -1,8 +1,9 @@
 package kurban.softwareProducts.release.service;
 
-import kurban.softwareProducts.common.error.ConflictException;
-import kurban.softwareProducts.common.error.NotFoundException;
+import kurban.softwareProducts.common.exception.base.ConflictException;
+import kurban.softwareProducts.common.exception.base.NotFoundException;
 import kurban.softwareProducts.developmentTask.repository.DevelopmentTaskRepository;
+import kurban.softwareProducts.release.exception.ReleaseNotFoundException;
 import kurban.softwareProducts.release.mapper.ReleaseMapper;
 import kurban.softwareProducts.release.model.Release;
 import kurban.softwareProducts.release.repository.ReleaseRepository;
@@ -46,7 +47,8 @@ public class ReleaseService {
 
     @Transactional
     public ReleaseResponse updateRelease(Long releaseId, UpdateReleaseRequest request) {
-        Release release = releaseRepository.findById(releaseId).get();
+        Release release = releaseRepository.findById(releaseId)
+                .orElseThrow(ReleaseNotFoundException::new);
         releaseMapper.updateFromUpdateReleaseRequest(request, release);
         return releaseMapper.toReleaseResponse(release);
     }
@@ -54,14 +56,14 @@ public class ReleaseService {
     @Transactional
     public void deleteRelease(Long releaseId) {
         Release release = releaseRepository.findById(releaseId)
-                .orElseThrow(() -> new NotFoundException("Релиз не найден"));
+                .orElseThrow(ReleaseNotFoundException::new);
 
         if (developmentTaskRepository.existsByReleaseId(releaseId)) {
             throw new ConflictException("Нельзя удалить релиз, к которому привязаны задачи");
         }
 
         SoftwareProduct product = softwareProductRepository.findById(release.getProductId())
-                .orElseThrow(() -> new NotFoundException("Программный продукт не найден"));
+                .orElseThrow(ReleaseNotFoundException::new);
 
         if(releaseId.equals(product.getCurrentReleaseId())){
             throw new ConflictException("Нельзя удалить релиз, который является текущим для продукта");

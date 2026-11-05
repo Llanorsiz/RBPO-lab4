@@ -6,6 +6,7 @@ import kurban.softwareProducts.developmentTask.web.request.UpdateDevelopmentTask
 import kurban.softwareProducts.developmentTask.web.response.DevelopmentTaskResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class DevelopmentTaskController {
         return developmentTaskService.assignTask(taskId, userId);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public DevelopmentTaskResponse createDevelopmentTask(@RequestBody CreateDevelopmentTaskRequest request) {
@@ -42,6 +44,7 @@ public class DevelopmentTaskController {
         return developmentTaskService.updateDevelopmentTask(developmentTaskId, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{developmentTaskId}")
     public void deleteDevelopmentTask(@PathVariable Long developmentTaskId) {

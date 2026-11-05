@@ -1,7 +1,9 @@
 package kurban.softwareProducts.user.service;
 
+import kurban.softwareProducts.common.exception.base.ForbiddenException;
 import kurban.softwareProducts.developmentTask.repository.DevelopmentTaskRepository;
 import kurban.softwareProducts.softwareProduct.repository.SoftwareProductRepository;
+import kurban.softwareProducts.user.exception.UserNotFoundException;
 import kurban.softwareProducts.user.mapper.UserMapper;
 import kurban.softwareProducts.user.model.User;
 import kurban.softwareProducts.user.repository.UserRepository;
@@ -15,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static kurban.softwareProducts.common.security.SecurityUtils.getCurrentUserId;
+import static kurban.softwareProducts.common.security.SecurityUtils.isAdmin;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +46,13 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
-        User user = userRepository.findById(userId).get();
+
+        if(!isAdmin() && !getCurrentUserId().equals(userId)){
+            throw new ForbiddenException("Вы можете менять только свой профиль");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
         userMapper.updateFromUpdateUserRequest(request, user);
         return userMapper.toUserResponse(user);
     }

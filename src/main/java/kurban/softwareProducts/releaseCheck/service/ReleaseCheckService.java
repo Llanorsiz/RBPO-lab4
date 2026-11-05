@@ -1,10 +1,11 @@
 package kurban.softwareProducts.releaseCheck.service;
 
-import kurban.softwareProducts.common.error.ConflictException;
-import kurban.softwareProducts.common.error.NotFoundException;
+import kurban.softwareProducts.common.exception.base.BadRequestException;
+import kurban.softwareProducts.release.exception.ReleaseNotFoundException;
 import kurban.softwareProducts.release.model.Release;
 import kurban.softwareProducts.release.model.ReleaseStatus;
 import kurban.softwareProducts.release.repository.ReleaseRepository;
+import kurban.softwareProducts.releaseCheck.exception.ReleaseCheckNotFoundException;
 import kurban.softwareProducts.releaseCheck.mapper.ReleaseCheckMapper;
 import kurban.softwareProducts.releaseCheck.model.ReleaseCheck;
 import kurban.softwareProducts.releaseCheck.model.ReleaseCheckType;
@@ -37,12 +38,12 @@ public class ReleaseCheckService {
     @Transactional
     public ReleaseCheckResponse createReleaseCheck(Long releaseId, CreateReleaseCheckRequest request) {
         Release release = releaseRepository.findById(releaseId)
-                .orElseThrow(() -> new NotFoundException("Релиз не найден"));
+                .orElseThrow(ReleaseNotFoundException::new);
         if(release.getStatus() == ReleaseStatus.ACTUAL){
-            throw new ConflictException("Нельзя менять чек-листы у актуального релиза");
+            throw new BadRequestException("Нельзя менять чек-листы у актуального релиза");
         }
         if(request.getType() == ReleaseCheckType.REQUIRED && !StringUtils.hasText(request.getResult())){
-            throw new IllegalArgumentException("Обязательный чек-лист не может быть без резултата");
+            throw new BadRequestException("Обязательный чек-лист не может быть без результата");
         }
         ReleaseCheck releaseCheck = releaseCheckMapper.fromCreateReleaseCheckRequest(request);
         releaseCheck.setReleaseId(releaseId);
@@ -52,7 +53,20 @@ public class ReleaseCheckService {
 
     @Transactional
     public ReleaseCheckResponse updateReleaseCheck(Long releaseCheckId, UpdateReleaseCheckRequest request) {
-        ReleaseCheck releaseCheck = releaseCheckRepository.findById(releaseCheckId).get();
+        ReleaseCheck releaseCheck = releaseCheckRepository.findById(releaseCheckId)
+                .orElseThrow(ReleaseCheckNotFoundException::new);
+
+        Release release = releaseRepository.findById(releaseCheck.getReleaseId())
+                .orElseThrow(ReleaseNotFoundException::new);
+
+        if(release.getStatus() == ReleaseStatus.ACTUAL){
+            throw new BadRequestException("Нельзя менять чек-листы у актуального релиза");
+        }
+
+        if(request.getType() == ReleaseCheckType.REQUIRED && !StringUtils.hasText(request.getResult())){
+            throw new BadRequestException("Обязательный чек-лист не может быть без результата");
+        }
+
         releaseCheckMapper.updateFromUpdateReleaseCheckRequest(request, releaseCheck);
         return releaseCheckMapper.toReleaseCheckResponse(releaseCheck);
     }

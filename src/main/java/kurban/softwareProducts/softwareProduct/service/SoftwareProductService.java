@@ -1,12 +1,15 @@
 package kurban.softwareProducts.softwareProduct.service;
 
-import kurban.softwareProducts.common.error.ConflictException;
-import kurban.softwareProducts.common.error.NotFoundException;
+import kurban.softwareProducts.common.exception.base.ConflictException;
+import kurban.softwareProducts.common.exception.base.ForbiddenException;
+import kurban.softwareProducts.common.exception.base.NotFoundException;
+import kurban.softwareProducts.common.security.SecurityUtils;
 import kurban.softwareProducts.developmentTask.model.DevelopmentTaskProgress;
 import kurban.softwareProducts.developmentTask.repository.DevelopmentTaskRepository;
 import kurban.softwareProducts.release.model.Release;
 import kurban.softwareProducts.release.repository.ReleaseRepository;
 import kurban.softwareProducts.releaseCheck.repository.ReleaseCheckRepository;
+import kurban.softwareProducts.softwareProduct.exception.SoftwareProductNotFoundException;
 import kurban.softwareProducts.softwareProduct.mapper.SoftwareProductMapper;
 import kurban.softwareProducts.softwareProduct.model.SoftwareProduct;
 import kurban.softwareProducts.softwareProduct.repository.SoftwareProductRepository;
@@ -39,7 +42,9 @@ public class SoftwareProductService {
     @Transactional
     public SoftwareProductResponse changeResponsibleUser(Long productId, Long newResponsibleUserId){
         SoftwareProduct softwareProduct = softwareProductRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Программный продукт не найден"));
+                .orElseThrow(SoftwareProductNotFoundException::new);
+
+        requireRights(softwareProduct.getResponsibleUserId());
 
         boolean busy = developmentTaskRepository.existsByAssigneeUserIdAndProgress(newResponsibleUserId, DevelopmentTaskProgress.IN_PROGRESS);
         if(busy){
@@ -58,19 +63,32 @@ public class SoftwareProductService {
 
     @Transactional
     public SoftwareProductResponse updateSoftwareProduct(Long softwareProductId, UpdateSoftwareProductRequest request) {
-        SoftwareProduct softwareProduct = softwareProductRepository.findById(softwareProductId).get();
+        SoftwareProduct softwareProduct = softwareProductRepository.findById(softwareProductId)
+                .orElseThrow(SoftwareProductNotFoundException::new);
+
+        requireRights(softwareProduct.getResponsibleUserId());
+
         softwareProductMapper.updateFromUpdateSoftwareProductRequest(request, softwareProduct);
+
         return softwareProductMapper.toSoftwareProductResponse(softwareProduct);
     }
 
     @Transactional
     public void deleteSoftwareProduct(Long softwareProductId) {
         List<Release> releases = releaseRepository.findByProductId(softwareProductId);
+
         for (Release release : releases) {
             releaseCheckRepository.deleteAll(releaseCheckRepository.findByReleaseId(release.getId()));
         }
+
         developmentTaskRepository.deleteAll(developmentTaskRepository.findByProductId(softwareProductId));
         releaseRepository.deleteAll(releases);
         softwareProductRepository.deleteById(softwareProductId);
+    }
+
+    private void requireRights(Long responsibleUserId){
+        if(!SecurityUtils.isAdmin() && !SecurityUtils.getCurrentUserId().equals(responsibleUserId)){
+            throw new ForbiddenException();
+        }
     }
 }

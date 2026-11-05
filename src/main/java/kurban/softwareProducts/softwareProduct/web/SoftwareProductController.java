@@ -6,6 +6,7 @@ import kurban.softwareProducts.softwareProduct.web.request.UpdateSoftwareProduct
 import kurban.softwareProducts.softwareProduct.web.response.SoftwareProductResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,6 +38,7 @@ public class SoftwareProductController {
         return softwareProductService.updateSoftwareProduct(softwareProductId, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{softwareProductId}")
     public void deleteSoftwareProduct(@PathVariable Long softwareProductId) {

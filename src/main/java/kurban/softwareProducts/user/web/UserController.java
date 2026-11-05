@@ -6,6 +6,7 @@ import kurban.softwareProducts.user.web.request.UpdateUserRequest;
 import kurban.softwareProducts.user.web.response.UserResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class UserController {
         return userService.getUsers();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public UserResponse createUser(@RequestBody CreateUserRequest request) {
@@ -32,6 +34,7 @@ public class UserController {
         return userService.updateUser(userId, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{userId}")
     public void deleteUser(@PathVariable Long userId) {

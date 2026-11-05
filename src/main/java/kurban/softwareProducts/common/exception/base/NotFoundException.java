@@ -1,4 +1,4 @@
-package kurban.softwareProducts.common.error;
+package kurban.softwareProducts.common.exception.base;
 
 public class NotFoundException extends RuntimeException {
     public NotFoundException(String message) {

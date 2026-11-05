@@ -6,6 +6,7 @@ import kurban.softwareProducts.releaseCheck.web.request.UpdateReleaseCheckReques
 import kurban.softwareProducts.releaseCheck.web.response.ReleaseCheckResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +33,7 @@ public class ReleaseCheckController {
         return releaseCheckService.updateReleaseCheck(releaseCheckId, request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{releaseCheckId}")
     public void deleteReleaseCheck(@PathVariable Long releaseCheckId) {

@@ -1,7 +1,9 @@
 package kurban.softwareProducts.developmentTask.service;
 
-import kurban.softwareProducts.common.error.ConflictException;
-import kurban.softwareProducts.common.error.NotFoundException;
+import kurban.softwareProducts.common.exception.base.ConflictException;
+import kurban.softwareProducts.common.exception.base.ForbiddenException;
+import kurban.softwareProducts.common.exception.base.NotFoundException;
+import kurban.softwareProducts.developmentTask.exception.DevelopmentTaskNotFoundException;
 import kurban.softwareProducts.developmentTask.mapper.DevelopmentTaskMapper;
 import kurban.softwareProducts.developmentTask.model.DevelopmentTask;
 import kurban.softwareProducts.developmentTask.model.DevelopmentTaskProgress;
@@ -9,12 +11,15 @@ import kurban.softwareProducts.developmentTask.repository.DevelopmentTaskReposit
 import kurban.softwareProducts.developmentTask.web.request.CreateDevelopmentTaskRequest;
 import kurban.softwareProducts.developmentTask.web.request.UpdateDevelopmentTaskRequest;
 import kurban.softwareProducts.developmentTask.web.response.DevelopmentTaskResponse;
+import kurban.softwareProducts.user.exception.UserNotFoundException;
 import kurban.softwareProducts.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
+import static kurban.softwareProducts.common.security.SecurityUtils.*;
 
 @Service
 @RequiredArgsConstructor
@@ -34,8 +39,11 @@ public class DevelopmentTaskService {
     @Transactional
     public DevelopmentTaskResponse completeTask(Long taskId){
         DevelopmentTask developmentTask = developmentTaskRepository.findById(taskId)
-                .orElseThrow(() -> new NotFoundException("Задача не найдена"));
+                .orElseThrow(DevelopmentTaskNotFoundException::new);
 
+        if(!isAdmin() && !getCurrentUserId().equals(developmentTask.getAssigneeUserId())){
+            throw new ForbiddenException();
+        }
         if(developmentTask.getProgress() != DevelopmentTaskProgress.IN_PROGRESS){
             throw new ConflictException("Завершить задачу можно, когда она в процессе");
         }
@@ -47,13 +55,18 @@ public class DevelopmentTaskService {
     @Transactional
     public DevelopmentTaskResponse assignTask(Long taskId, Long userId){
         DevelopmentTask developmentTask = developmentTaskRepository.findById(taskId)
-                .orElseThrow(() -> new NotFoundException("Задача не найдена"));
+                .orElseThrow(DevelopmentTaskNotFoundException::new);
+
+        if(!isAdmin() && !getCurrentUserId().equals(userId)){
+            throw new ForbiddenException("Вы можете назначать задачи только на себя");
+        }
+
         if(developmentTask.getProgress() == DevelopmentTaskProgress.DONE){
             throw new ConflictException("Нельзя назначить исполнителя уже на выполненную задачу");
         }
 
         if(!userRepository.existsById(userId)){
-            throw new NotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
 
         developmentTask.setAssigneeUserId(userId);
@@ -70,6 +83,11 @@ public class DevelopmentTaskService {
     @Transactional
     public DevelopmentTaskResponse updateDevelopmentTask(Long developmentTaskId, UpdateDevelopmentTaskRequest request) {
         DevelopmentTask developmentTask = developmentTaskRepository.findById(developmentTaskId).get();
+
+        if(!isAdmin() && !getCurrentUserId().equals(developmentTask.getAssigneeUserId())){
+            throw new ForbiddenException("Вы можете изменять только свои задачи");
+        }
+
         developmentTaskMapper.updateFromUpdateDevelopmentTaskRequest(request, developmentTask);
         return developmentTaskMapper.toDevelopmentTaskResponse(developmentTask);
     }
