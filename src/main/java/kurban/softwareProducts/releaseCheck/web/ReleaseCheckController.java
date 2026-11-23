@@ -22,6 +22,11 @@ public class ReleaseCheckController {
         return releaseCheckService.getReleaseChecks();
     }
 
+    @GetMapping("/{releaseCheckId}")
+    public ReleaseCheckResponse getReleaseCheck(@PathVariable Long releaseCheckId){
+        return releaseCheckService.getReleaseCheck(releaseCheckId);
+    }
+
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/releases/{releaseId}")
     public ReleaseCheckResponse createReleaseCheck(@PathVariable Long releaseId, @RequestBody CreateReleaseCheckRequest request) {
